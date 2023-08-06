@@ -3,8 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { TokenService } from 'modules/token/token.service';
 import { UsersService } from 'modules/users/users.service';
 import { ObjectId } from 'mongodb';
-import { PayloadDTO } from './dto';
-import { JWT_EXP } from '../../constants';
+import { AVATAR_URL, JWT_EXP, MSG } from '../../constants';
+import { AccessTokenResponse, LoginDTO, PayloadDTO } from './dto';
+import { UserDTO } from 'modules/users/dto';
+import { ResponseMessage } from 'utils';
+import { UserDocument } from 'modules/users/entities';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +19,7 @@ export class AuthService {
 
   /** COMMON FUNCTIONS */
   async generateAccessToken(
-    userId,
+    userId: string,
     timestamp: number = Date.now(),
   ): Promise<string> {
     const jti = new ObjectId().toHexString();
@@ -29,5 +32,66 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
     return accessToken;
+  }
+
+  async signUp(
+    userDto: UserDTO,
+    timestamp: number = Date.now(),
+  ): Promise<AccessTokenResponse> {
+    const newUser = await this.userService.createUser({
+      ...userDto,
+      avatar: AVATAR_URL,
+      isThirdParty: false,
+    });
+
+    const accessToken = await this.generateAccessToken(newUser.id, timestamp);
+
+    return {
+      user: newUser,
+      accessToken,
+    };
+  }
+
+  async signIn(
+    loginDto: LoginDTO,
+    timestamp: number = Date.now(),
+  ): Promise<AccessTokenResponse> {
+    const { username, password } = loginDto;
+    const currentUser = await this.userService.findByUsernameOrEmail(username);
+
+    if (!currentUser || currentUser?.status?.toString() !== 'active') {
+      return ResponseMessage(`${MSG.FRONTEND.USER_NOT_FOUND}`, 'BAD_REQUEST');
+    }
+
+    const isCorrectPassword = await currentUser.comparePassword(password);
+    if (!isCorrectPassword) {
+      return ResponseMessage(`${MSG.FRONTEND.WRONG_PASSWORD}`, 'UNAUTHORIZED');
+    }
+
+    const accessToken = await this.generateAccessToken(
+      currentUser.id,
+      timestamp,
+    );
+    return {
+      user: currentUser,
+      accessToken,
+    };
+  }
+
+  async logout(user: UserDocument): Promise<{ message: string }> {
+    try {
+      await Promise.all([
+        this.tokenService.deleteJWTKey(user.id, user.jti),
+        this.tokenService.deleteExpiredJWTKeys(),
+      ]);
+
+      return {
+        message: 'Good bye :)',
+      };
+    } catch (error) {
+      return {
+        message: 'Logout Error -_-',
+      };
+    }
   }
 }

@@ -7,13 +7,13 @@ export const getEnv = (key: string) => {
   return value || '';
 };
 
-// server
+// Server
 export const ENVIRONMENT = getEnv('ENVIRONMENT');
 export const PRODUCTION = ENVIRONMENT === 'production';
 export const DEVELOPMENT = ENVIRONMENT === 'development';
 export const PORT = getEnv('PORT');
 
-// project
+// Project
 export const PROJECT_NAME = getEnv('PROJECT_NAME');
 export const PROJECT_VERSION = getEnv('PROJECT_VERSION');
 export const PROJECT_DESCRIPTION = getEnv('PROJECT_DESCRIPTION');
@@ -28,9 +28,12 @@ export const DATABASE_URL = MONGO_URI.replace('{username}', MONGO_USERNAME)
   .replace('{password}', MONGO_PASSWORD)
   .replace('{db-name}', MONGO_DB_NAME);
 
-// swagger
+// Swagger
 export const SWAGGER_PATH = getEnv('SWAGGER_PATH');
 
 // Auth
 export const JWT_SECRET = getEnv('JWT_SECRET');
 export const JWT_EXP = Number(getEnv('JWT_EXP'));
+
+// Default variables
+export const AVATAR_URL = getEnv('AVATAR_URL');

@@ -202,4 +202,6 @@ UserSchema.methods.checkPasswordConfirm = function () {
   return this.get('password') === this.get('passwordConfirm');
 };
 
-export interface UserDocument extends User, Document {}
+export interface UserDocument extends User, Document {
+  [x: string]: any;
+}

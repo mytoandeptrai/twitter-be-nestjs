@@ -1,11 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { JWT_SECRET } from '../../../constants';
 import { TokenService } from 'modules/token/token.service';
+import { User } from 'modules/users/entities';
 import { UsersService } from 'modules/users/users.service';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PayloadDTO } from '../dto';
-import { User } from 'modules/users/entities';
+import { JWT_SECRET, MSG } from './../../../constants';
+import { ResponseMessage } from 'utils';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,6 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
       secretOrKey: JWT_SECRET,
     });
   }
@@ -28,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     user.jti = payload.jti;
     const checkJwt = await this.tokenService.checkJWTKey(sub, jti);
     if (!checkJwt) {
-      throw new UnauthorizedException('Invalid Jwt Token');
+      return ResponseMessage(`${MSG.FRONTEND.UN_AUTHORIZED}`, 'UNAUTHORIZED');
     }
     return user;
   }

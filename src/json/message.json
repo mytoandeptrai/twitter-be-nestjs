@@ -10,6 +10,8 @@
     "INACTIVE_EMAIL": "Email not active",
     "WRONG_PASSWORD": "Wrong password",
     "TOO_MANY_REQUEST": "Too many request",
+    "USER_NOT_FOUND": "User not found",
+    "UN_AUTHORIZED": "Invalid token",
     "ACTIVE_USER": {
       "ERROR": "Internal error",
       "TOKEN_INVALID": "Invalid token",
