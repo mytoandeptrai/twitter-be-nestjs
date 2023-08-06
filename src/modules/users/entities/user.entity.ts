@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { IsEmail, IsNumber, IsString, Length } from 'class-validator';
 import { Schema as MongoSchema } from 'mongoose';
-import { EAudience, EGender } from '../../../constants';
+import { EAudienceConstant, EGenderConstant } from '../../../constants';
 import { BCRYPT_HASH_NUMBER, USER_CONST, USER_MODEL } from '../constants';
 
 @Schema({
@@ -81,11 +81,13 @@ export class User {
   })
   email: string;
 
+  @IsNumber()
   @Prop({
-    enum: Object.values(EGender),
-    default: EGender.UNKNOWN,
+    type: Number,
+    enum: Object.values(EGenderConstant),
+    default: EGenderConstant.UNKNOWN,
   })
-  gender: EGender;
+  gender: number;
 
   @Prop({
     type: Date,
@@ -131,17 +133,25 @@ export class User {
   @Prop()
   jti: string;
 
-  @Prop({ type: [{ type: MongoSchema.Types.ObjectId, ref: User.name }] })
+  @Prop({
+    type: [{ type: MongoSchema.Types.ObjectId, ref: User.name }],
+    default: [],
+  })
   followers: UserDocument[];
 
-  @Prop({ type: [{ type: MongoSchema.Types.ObjectId, ref: User.name }] })
+  @Prop({
+    type: [{ type: MongoSchema.Types.ObjectId, ref: User.name }],
+    default: [],
+  })
   following: UserDocument[];
 
+  @IsNumber()
   @Prop({
-    enum: Object.values(EAudience),
-    default: EAudience.PUBLIC,
+    type: Number,
+    enum: Object.values(EAudienceConstant),
+    default: EAudienceConstant.PUBLIC,
   })
-  storyAudience: EAudience;
+  storyAudience: number;
 
   @Prop({
     type: String,

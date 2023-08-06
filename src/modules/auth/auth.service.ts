@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TokenService } from 'modules/token/token.service';
+import { UserDTO } from 'modules/users/dto';
+import { UserDocument } from 'modules/users/entities';
 import { UsersService } from 'modules/users/users.service';
 import { ObjectId } from 'mongodb';
+import { ResponseMessage } from 'utils';
 import { AVATAR_URL, JWT_EXP, MSG } from '../../constants';
 import { AccessTokenResponse, LoginDTO, PayloadDTO } from './dto';
-import { UserDTO } from 'modules/users/dto';
-import { ResponseMessage } from 'utils';
-import { UserDocument } from 'modules/users/entities';
 
 @Injectable()
 export class AuthService {
@@ -38,12 +38,13 @@ export class AuthService {
     userDto: UserDTO,
     timestamp: number = Date.now(),
   ): Promise<AccessTokenResponse> {
-    const newUser = await this.userService.createUser({
+    const userBody = {
       ...userDto,
       avatar: AVATAR_URL,
       isThirdParty: false,
-    });
+    };
 
+    const newUser = await this.userService.createUser(userBody);
     const accessToken = await this.generateAccessToken(newUser.id, timestamp);
 
     return {

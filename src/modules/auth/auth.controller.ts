@@ -31,10 +31,6 @@ export class AuthController {
   @ApiOkResponse()
   @UseGuards(MyTokenAuthGuard)
   async logout(@GetUser() user): Promise<{ message: string }> {
-    console.log('🚀 ~ file: auth.controller.ts:33 ~ logout ~ user:', user);
-    // return await this.authService.logout(user as UserDocument);
-    return {
-      message: 'Ok em',
-    };
+    return await this.authService.logout(user as UserDocument);
   }
 }

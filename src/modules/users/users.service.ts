@@ -9,7 +9,7 @@ import { User, UserDocument } from './entities';
 import { UserRepository } from './repository';
 import { UpdateUserDTO } from './dto';
 import { ResponseDTO } from 'common';
-import { MSG } from '../../constants';
+import { EAudience, MSG } from '../../constants';
 
 @Injectable()
 export class UsersService {
@@ -106,6 +106,15 @@ export class UsersService {
 
     const createdUser = new this.userModel(user);
 
+    const existedUserEmail = await this.checkIfEmailAlreadyTakenByOtherUser(
+      createdUser.email,
+      createdUser.id.toString(),
+    );
+
+    if (existedUserEmail) {
+      return ResponseMessage('Email is already taken', 'BAD_REQUEST');
+    }
+
     if (!createdUser.checkPasswordConfirm()) {
       return ResponseMessage(
         'Password and confirm password are not equal',
@@ -117,7 +126,7 @@ export class UsersService {
       await createdUser.save();
       return createdUser;
     } catch (error) {
-      return ResponseMessage(`${error}`, 'BAD_REQUEST');
+      return ResponseMessage(`${error}`, 'SERVICE_UNAVAILABLE');
     }
   }
 
@@ -139,7 +148,7 @@ export class UsersService {
     });
 
     if (!user) {
-      return ResponseMessage('User is not found', 'BAD_REQUEST');
+      return false;
     }
 
     return user && user?._id && user._id.toString() != userId;
