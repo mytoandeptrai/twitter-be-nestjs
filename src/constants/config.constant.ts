@@ -18,6 +18,15 @@ export const PROJECT_NAME = getEnv('PROJECT_NAME');
 export const PROJECT_VERSION = getEnv('PROJECT_VERSION');
 export const PROJECT_DESCRIPTION = getEnv('PROJECT_DESCRIPTION');
 
+// Cloudinary
+export const CLOUDINARY_URL = getEnv('CLOUDINARY_URL');
+export const CLOUDINARY_PATH = getEnv('CLOUDINARY_PATH');
+export const CLOUDINARY_PATH_DEV = getEnv('CLOUDINARY_PATH_DEV');
+export const CLOUDINARY_FOLDER = getEnv('CLOUDINARY_FOLDER');
+export const CLOUDINARY_NAME = getEnv('CLOUDINARY_NAME');
+export const CLOUDINARY_API_KEY = getEnv('CLOUDINARY_API_KEY');
+export const CLOUDINARY_API_SECRET = getEnv('CLOUDINARY_API_SECRET');
+
 // MongoDB
 export const MONGO_URL = getEnv('MONGO_URL');
 export const MONGO_DB_NAME = getEnv('MONGO_DB_NAME');

@@ -15,7 +15,6 @@ import {
   PROJECT_NAME,
   PROJECT_VERSION,
 } from './constants';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -39,8 +38,8 @@ async function bootstrap() {
 
   // Logger
   app.use(morgan(PRODUCTION ? 'combined' : 'dev'));
-  const uploadPath = process.cwd() + '/uploads';
-  app.use('/uploads', express.static(uploadPath));
+  const uploadPath = process.cwd() + './uploads';
+  app.use('./uploads', express.static(uploadPath));
 
   // Connect MongoDB
   MongoTool.initialize();

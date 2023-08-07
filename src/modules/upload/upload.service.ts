@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as tf from '@tensorflow/tfjs';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import jpeg from 'jpeg-js';
-import * as tf from '@tensorflow/tfjs';
 import * as nsfw from 'nsfwjs';
 import sharp, { FormatEnum } from 'sharp';
-import { generateUUID } from 'utils';
+import { ResponseMessage, generateUUID } from 'utils';
+import { PORN_ClASSES } from './constants';
 import { UploadMetaInput } from './dto';
 import { IImageFormat, IResizeImageInput } from './interfaces';
-import { PORN_ClASSES } from './constants';
 
 @Injectable()
 export class UploadService {
@@ -117,9 +117,13 @@ export class UploadService {
 
   private convertToTensor3D(img: jpeg.BufferLike): tf.Tensor3D {
     const image = jpeg.decode(img);
+    /** number of color in RBG ( Red, Black, Green ) */
     const numChannels = 3;
+    /** total pixels in picture */
     const numPixels = image.width * image.height;
+    /** an array for containing pixel after convert into number */
     const values = new Int32Array(numPixels * numChannels);
+    /** convert array from [0,0,0,0,...,0] -> [5, 3, 10, 5, 3, 10, ....] ( 5 is assign at the first variable in image.data - buffer type ) using Int32*/
     for (let i = 0; i < numPixels; i++)
       for (let c = 0; c < numChannels; ++c)
         values[i * numChannels + c] = image.data[i * 4 + c];
@@ -144,5 +148,91 @@ export class UploadService {
       console.error(`${this.isNsfw.name} error`, error);
       throw error;
     }
+  }
+
+  private async uploadToCloudinary(
+    file: string,
+    format: 'image' | 'video' | 'raw' | 'auto',
+  ): Promise<string> {
+    try {
+      const response = await cloudinary.uploader.upload(file, {
+        folder: this.configService.get<string>('cloudinary.path'),
+        resource_type: format,
+      });
+
+      return response?.secure_url ?? '';
+    } catch (error) {
+      console.error('Error uploading to cloudinary', error);
+      return '';
+    }
+  }
+
+  private async uploadImage(
+    file: Express.Multer.File,
+    imageFormat: IImageFormat,
+  ): Promise<string> {
+    const filePath = this.getFilePath('image');
+
+    await this.resizeImage({
+      file,
+      filePath,
+      ...imageFormat,
+    });
+    const isNsfw = await this.isNsfw(filePath);
+    if (isNsfw) {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error(`${this.uploadImage.name} unlink error`, err);
+        }
+      });
+      return ResponseMessage(`nsfw`, 'BAD_REQUEST');
+    }
+    await this.resizeImage({
+      file,
+      filePath,
+      ...imageFormat,
+    });
+    const url = await this.uploadToCloudinary(filePath, 'image');
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error(`${this.uploadImage.name} unlink error`, err);
+      }
+    });
+    return url;
+  }
+
+  private async uploadVideo(file: Express.Multer.File): Promise<string> {
+    const filePath = this.getFilePath('video');
+    fs.writeFileSync(filePath, file.buffer);
+    const url = await this.uploadToCloudinary(filePath, 'video');
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error(`${this.uploadImage.name} unlink error`, err);
+      }
+    });
+    return url;
+  }
+
+  async uploadMedias(
+    files: Express.Multer.File[],
+    meta: UploadMetaInput,
+  ): Promise<string[]> {
+    const imageFiles = files.filter((file) =>
+      file.mimetype.startsWith('image/'),
+    );
+    const videoFiles = files.filter((file) =>
+      file.mimetype.startsWith('video/'),
+    );
+
+    const imageFormat = this.getImageFormat(meta);
+    const uploadImageFunc = this.uploadImage.bind(this);
+    const uploadVideoFunc = this.uploadVideo.bind(this);
+    const [imageUrls, videoUrls] = await Promise.all([
+      this.bulkUpload(imageFiles, uploadImageFunc, imageFormat),
+      this.bulkUpload(videoFiles, uploadVideoFunc),
+    ]);
+
+    // return [...imageUrls, ...videoUrls];
+    return ['123', '456'];
   }
 }
