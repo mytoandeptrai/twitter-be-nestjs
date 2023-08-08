@@ -38,8 +38,8 @@ async function bootstrap() {
 
   // Logger
   app.use(morgan(PRODUCTION ? 'combined' : 'dev'));
-  const uploadPath = process.cwd() + './uploads';
-  app.use('./uploads', express.static(uploadPath));
+  const uploadPath = process.cwd() + '/src/uploads';
+  app.use('/upload', express.static(uploadPath));
 
   // Connect MongoDB
   MongoTool.initialize();

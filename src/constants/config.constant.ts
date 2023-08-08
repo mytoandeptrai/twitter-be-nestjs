@@ -46,3 +46,6 @@ export const JWT_EXP = Number(getEnv('JWT_EXP'));
 
 // Default variables
 export const AVATAR_URL = getEnv('AVATAR_URL');
+
+// Upload
+export const UPLOAD_FILE_PATH = getEnv('UPLOAD_FILE_PATH');

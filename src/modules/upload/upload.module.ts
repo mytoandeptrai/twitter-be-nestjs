@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
-  imports: [],
+  imports: [ConfigModule],
   controllers: [UploadController],
   providers: [UploadService, ConfigService],
 })

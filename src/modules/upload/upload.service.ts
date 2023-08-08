@@ -15,13 +15,23 @@ import { IImageFormat, IResizeImageInput } from './interfaces';
 export class UploadService {
   private model: nsfw.NSFWJS;
   private imagePath = '';
+  private cloudinaryInstance;
 
   constructor(private readonly configService: ConfigService) {
     this.loadNsfwModel();
-    const imagePath = this.configService.get<string>('imagePath');
-    if (imagePath) {
-      this.imagePath = imagePath;
-    }
+    const imagePath = this.getFileFromConfig('UPLOAD_FILE_PATH');
+    // if (imagePath) {
+    //   this.imagePath = imagePath;
+    // }
+
+    const cloud_name = this.getFileFromConfig('CLOUDINARY_NAME');
+    const api_key = this.getFileFromConfig('CLOUDINARY_API_KEY');
+    const api_secret = this.getFileFromConfig('CLOUDINARY_API_SECRET');
+    this.cloudinaryInstance = cloudinary.config({
+      cloud_name,
+      api_key,
+      api_secret,
+    });
   }
 
   private async loadNsfwModel(): Promise<void> {
@@ -41,6 +51,10 @@ export class UploadService {
 
   private getFileType = (file: Express.Multer.File) => {
     return file.originalname?.split('.')[1];
+  };
+
+  private getFileFromConfig = (key: string) => {
+    return this.configService.get<string>(key);
   };
 
   private getImageFormat(meta: UploadMetaInput): IImageFormat {
@@ -153,10 +167,11 @@ export class UploadService {
   private async uploadToCloudinary(
     file: string,
     format: 'image' | 'video' | 'raw' | 'auto',
+    folder = this.getFileFromConfig('CLOUDINARY_FOLDER'),
   ): Promise<string> {
     try {
-      const response = await cloudinary.uploader.upload(file, {
-        folder: this.configService.get<string>('cloudinary.path'),
+      const response = await this.cloudinaryInstance.uploader.upload(file, {
+        folder,
         resource_type: format,
       });
 
@@ -187,11 +202,6 @@ export class UploadService {
       });
       return ResponseMessage(`nsfw`, 'BAD_REQUEST');
     }
-    await this.resizeImage({
-      file,
-      filePath,
-      ...imageFormat,
-    });
     const url = await this.uploadToCloudinary(filePath, 'image');
     fs.unlink(filePath, (err) => {
       if (err) {
@@ -232,7 +242,6 @@ export class UploadService {
       this.bulkUpload(videoFiles, uploadVideoFunc),
     ]);
 
-    // return [...imageUrls, ...videoUrls];
-    return ['123', '456'];
+    return [...imageUrls, ...videoUrls];
   }
 }
