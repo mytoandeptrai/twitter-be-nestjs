@@ -5,8 +5,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import jpeg from 'jpeg-js';
 import * as nsfw from 'nsfwjs';
-import sharp, { FormatEnum } from 'sharp';
-import { ResponseMessage, generateUUID } from 'utils';
+import sharp from 'sharp';
+import { ResponseMessage } from 'utils';
 import { PORN_ClASSES } from './constants';
 import { UploadMetaInput } from './dto';
 import { IImageFormat, IResizeImageInput } from './interfaces';
@@ -14,24 +14,9 @@ import { IImageFormat, IResizeImageInput } from './interfaces';
 @Injectable()
 export class UploadService {
   private model: nsfw.NSFWJS;
-  private imagePath = '';
-  private cloudinaryInstance;
 
   constructor(private readonly configService: ConfigService) {
     this.loadNsfwModel();
-    const imagePath = this.getFileFromConfig('UPLOAD_FILE_PATH');
-    // if (imagePath) {
-    //   this.imagePath = imagePath;
-    // }
-
-    const cloud_name = this.getFileFromConfig('CLOUDINARY_NAME');
-    const api_key = this.getFileFromConfig('CLOUDINARY_API_KEY');
-    const api_secret = this.getFileFromConfig('CLOUDINARY_API_SECRET');
-    this.cloudinaryInstance = cloudinary.config({
-      cloud_name,
-      api_key,
-      api_secret,
-    });
   }
 
   private async loadNsfwModel(): Promise<void> {
@@ -39,19 +24,6 @@ export class UploadService {
       this.model = await nsfw?.load();
     }
   }
-
-  private getFilePath(
-    type: 'video' | 'image',
-    format: keyof FormatEnum = 'jpeg',
-  ): string {
-    return `${this.imagePath}/${
-      type === 'video' ? `${generateUUID()}.mp4` : `${generateUUID()}.${format}`
-    }`;
-  }
-
-  private getFileType = (file: Express.Multer.File) => {
-    return file.originalname?.split('.')[1];
-  };
 
   private getFileFromConfig = (key: string) => {
     return this.configService.get<string>(key);
@@ -91,6 +63,21 @@ export class UploadService {
     }
   }
 
+  private removeImageFromFilePath(filePath: string) {
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        return ResponseMessage(
+          `${this.uploadImage.name} unlink error`,
+          'BAD_REQUEST',
+        );
+      }
+    });
+  }
+
+  private renameSyncFile(currentFilePath: string, renamedFilePath: string) {
+    return fs.renameSync(currentFilePath, renamedFilePath);
+  }
+
   private async resizeImage({
     file,
     format = 'jpeg',
@@ -100,7 +87,7 @@ export class UploadService {
     filePath,
   }: IResizeImageInput): Promise<void> {
     try {
-      await sharp(file.buffer)
+      await sharp(file.path)
         .resize(width, height, { fit: 'inside' })
         .toFormat(format)
         .jpeg({ quality })
@@ -167,10 +154,10 @@ export class UploadService {
   private async uploadToCloudinary(
     file: string,
     format: 'image' | 'video' | 'raw' | 'auto',
-    folder = this.getFileFromConfig('CLOUDINARY_FOLDER'),
+    folder = this.getFileFromConfig('CLOUDINARY_FOLDER_IMAGE'),
   ): Promise<string> {
     try {
-      const response = await this.cloudinaryInstance.uploader.upload(file, {
+      const response = await cloudinary.uploader.upload(file, {
         folder,
         resource_type: format,
       });
@@ -186,40 +173,35 @@ export class UploadService {
     file: Express.Multer.File,
     imageFormat: IImageFormat,
   ): Promise<string> {
-    const filePath = this.getFilePath('image');
+    const resizedFilePath = `${file?.destination}/temp-${file?.filename}`;
+    const uploadedFilePath = `${file?.destination}/${file?.filename}`;
 
     await this.resizeImage({
       file,
-      filePath,
+      filePath: resizedFilePath,
       ...imageFormat,
     });
-    const isNsfw = await this.isNsfw(filePath);
+    const isNsfw = await this.isNsfw(resizedFilePath);
     if (isNsfw) {
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error(`${this.uploadImage.name} unlink error`, err);
-        }
-      });
-      return ResponseMessage(`nsfw`, 'BAD_REQUEST');
+      this.removeImageFromFilePath(resizedFilePath);
+      this.removeImageFromFilePath(uploadedFilePath);
+      return ResponseMessage(`The image is sensitive content`, 'BAD_REQUEST');
     }
-    const url = await this.uploadToCloudinary(filePath, 'image');
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error(`${this.uploadImage.name} unlink error`, err);
-      }
-    });
+    this.renameSyncFile(resizedFilePath, uploadedFilePath);
+    const url = await this.uploadToCloudinary(uploadedFilePath, 'image');
+    if (url) {
+      this.removeImageFromFilePath(uploadedFilePath);
+    }
     return url;
   }
 
   private async uploadVideo(file: Express.Multer.File): Promise<string> {
-    const filePath = this.getFilePath('video');
-    fs.writeFileSync(filePath, file.buffer);
-    const url = await this.uploadToCloudinary(filePath, 'video');
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error(`${this.uploadImage.name} unlink error`, err);
-      }
-    });
+    const cloudFolder = this.getFileFromConfig('CLOUDINARY_FOLDER_VIDEO');
+    const filePath = file?.path;
+    const url = await this.uploadToCloudinary(filePath, 'video', cloudFolder);
+    if (url) {
+      this.removeImageFromFilePath(filePath);
+    }
     return url;
   }
 

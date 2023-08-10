@@ -1,3 +1,5 @@
+import path from 'path';
+
 export const generateUUID = () => {
   let d = new Date().getTime();
   if (
@@ -15,4 +17,12 @@ export const generateUUID = () => {
     },
   );
   return uuid;
+};
+
+export const transformNameToUrl = (str: string): string => {
+  return `${str.toLowerCase().split(' ').join('-')}-${Date.now()}`;
+};
+
+export const createUploadsFolder = (folderName: string) => {
+  return path.join(process.cwd(), folderName);
 };

@@ -15,6 +15,9 @@ import {
   PROJECT_NAME,
   PROJECT_VERSION,
 } from './constants';
+import path from 'path';
+import * as fs from 'fs';
+import { createUploadsFolder } from 'utils';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -38,11 +41,14 @@ async function bootstrap() {
 
   // Logger
   app.use(morgan(PRODUCTION ? 'combined' : 'dev'));
-  const uploadPath = process.cwd() + '/src/uploads';
-  app.use('/upload', express.static(uploadPath));
 
   // Connect MongoDB
   MongoTool.initialize();
+  const uploadPath = createUploadsFolder('uploads');
+
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath);
+  }
 
   // Config listen
   app.enableCors();
