@@ -7,10 +7,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { ResponseDTO } from 'common';
-import { Model, Schema } from 'mongoose';
+import { Model } from 'mongoose';
 import { QueryOption, QueryPostOption } from 'tools';
 import { ResponseMessage } from 'utils';
-import { MSG } from '../../constants';
+import { MSG, ROOT_ROLES } from '../../constants';
 import { REGEX_EMAIL, REGEX_USER } from './constants';
 import { UpdateUserDTO } from './dto';
 import { User, UserDocument } from './entities';
@@ -133,6 +133,15 @@ export class UsersService {
     return this.findAllAndCount(query.options as QueryOption, conditions);
   }
 
+  async getUserList(query: QueryPostOption) {
+    const conditions = {
+      role: { $eq: 'user' },
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    };
+
+    return this.findAllAndCount(query.options as QueryOption, conditions);
+  }
+
   /** MUTATIONS */
 
   async createUser(user: Partial<User>): Promise<UserDocument> {
@@ -168,6 +177,73 @@ export class UsersService {
     } catch (error) {
       return ResponseMessage(`${error}`, 'SERVICE_UNAVAILABLE');
     }
+  }
+
+  async preUpdateUser(userId: string, newUserInfo: UpdateUserDTO) {
+    const user = await this.findById(userId);
+    if (!user) {
+      return ResponseMessage('User does not exist', 'BAD_REQUEST');
+    }
+
+    const userEmail = newUserInfo?.email;
+    let userPassword = newUserInfo?.password;
+    const userNewPassword = newUserInfo?.newPassword;
+
+    if (userEmail) {
+      await this.checkIfEmailIsAvailable(userEmail, userId);
+    }
+
+    if (userPassword) {
+      userPassword = await this.generateNewPassword(userPassword);
+    }
+
+    if (newUserInfo.oldPassword) {
+      const isPasswordCorrect = await this.checkIfPasswordIsCorrect(
+        user,
+        newUserInfo.oldPassword,
+      );
+      if (!isPasswordCorrect) {
+        return ResponseMessage('Old password is not valid', 'BAD_REQUEST');
+      }
+      newUserInfo.password = await this.generateNewPassword(
+        userNewPassword as string,
+      );
+
+      this.deleteUnnecessaryFieldsForUpdating(newUserInfo);
+    }
+
+    return newUserInfo;
+  }
+
+  async updateUser(userId: string, data: UpdateUserDTO): Promise<UserDocument> {
+    try {
+      const newUserInfo = await this.preUpdateUser(userId, data);
+      const responseData = await this.userModel.findOneAndUpdate(
+        {
+          _id: userId,
+        },
+        newUserInfo,
+        {
+          new: true,
+        },
+      );
+
+      return responseData as UserDocument;
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async updateUserById(
+    userId: string,
+    data: UpdateUserDTO,
+    requestUser: UserDocument,
+  ): Promise<UserDocument> {
+    if (!this.isAdminRole(requestUser)) {
+      return ResponseMessage('You are not an admin', 'METHOD_NOT_ALLOWED');
+    }
+
+    return this.updateUser(userId, data);
   }
 
   async followUser(user: UserDocument, userToFollowId: string) {
@@ -260,7 +336,52 @@ export class UsersService {
     }
   }
 
+  async followAnonymous({
+    userAId,
+    userBId,
+  }: {
+    userAId: string;
+    userBId: string;
+  }) {
+    const userA = await this.findById(userAId);
+    if (!userA.following.some((user) => user._id.toString() === userBId)) {
+      const userB = await this.findById(userBId);
+      userA.following.push(userB);
+      userB.followers.push(userA);
+      await this.userModel.findByIdAndUpdate(userA._id, {
+        following: userA.following,
+      });
+      await this.userModel.findByIdAndUpdate(userB._id, {
+        followers: userB.followers,
+      });
+    }
+  }
+
+  async updateBanStatusOfUser(
+    requestUser: UserDocument,
+    banStatus: string,
+    userId: string,
+  ): Promise<UserDocument> {
+    if (!this.isAdminRole(requestUser)) {
+      return ResponseMessage('You are not an admin', 'METHOD_NOT_ALLOWED');
+    }
+
+    const updatedUser = await this.userModel.findOneAndUpdate(
+      { _id: userId },
+      {
+        status: banStatus,
+      },
+      { new: true },
+    );
+
+    return updatedUser as UserDocument;
+  }
+
   /** CHECKING FUNCTIONS */
+
+  isAdminRole(requestUser: UserDocument): boolean {
+    return ROOT_ROLES.includes(requestUser.role);
+  }
 
   async checkIfPasswordIsCorrect(
     user: UserDocument,
