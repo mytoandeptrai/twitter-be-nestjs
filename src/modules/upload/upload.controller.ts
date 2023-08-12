@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { MyTokenAuthGuard } from 'common/guards';
+import { MyTokenAuthGuard } from 'common';
 import { UploadTool } from 'tools';
 import { UploadMetaInput } from './dto';
 import { UploadService } from './upload.service';

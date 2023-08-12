@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { ResponseDTO } from 'common';
@@ -12,7 +7,7 @@ import { QueryOption, QueryPostOption } from 'tools';
 import { ResponseMessage } from 'utils';
 import { MSG, ROOT_ROLES } from '../../constants';
 import { REGEX_EMAIL, REGEX_USER } from './constants';
-import { UpdateUserDTO } from './dto';
+import { FollowAnonymousDto, UpdateUserDTO } from './dto';
 import { User, UserDocument } from './entities';
 import { UserRepository } from './repository';
 @Injectable()
@@ -140,6 +135,59 @@ export class UsersService {
     };
 
     return this.findAllAndCount(query.options as QueryOption, conditions);
+  }
+
+  async getPopularUsers(
+    user: UserDocument,
+    option: QueryOption,
+  ): Promise<{
+    data: UserDocument[];
+    total: number;
+  }> {
+    const data = await this.userModel
+      .aggregate([
+        {
+          $addFields: {
+            followers_count: {
+              $size: { $ifNull: ['$followers', []] },
+            },
+          },
+        },
+        {
+          $sort: { followers_count: -1 },
+        },
+        ...((user?._id && [
+          {
+            $match: {
+              _id: { $ne: user._id },
+              followers: { $ne: user._id },
+              role: { $eq: 'user' },
+            },
+          },
+        ]) ||
+          []),
+      ])
+      .skip(option.skip as number)
+      .limit(option.limit as number)
+      .exec();
+
+    await this.userModel.populate(data, {
+      path: 'followers',
+      select: '_id',
+    });
+
+    const conditions = {
+      ...(user?._id && {
+        _id: { $ne: user._id },
+        followers: { $ne: user._id },
+      }),
+    };
+    const count = await this.userModel.countDocuments(conditions);
+
+    return {
+      data,
+      total: count,
+    };
   }
 
   /** MUTATIONS */
@@ -336,13 +384,7 @@ export class UsersService {
     }
   }
 
-  async followAnonymous({
-    userAId,
-    userBId,
-  }: {
-    userAId: string;
-    userBId: string;
-  }) {
+  async followAnonymous({ userAId, userBId }: FollowAnonymousDto) {
     const userA = await this.findById(userAId);
     if (!userA.following.some((user) => user._id.toString() === userBId)) {
       const userB = await this.findById(userBId);

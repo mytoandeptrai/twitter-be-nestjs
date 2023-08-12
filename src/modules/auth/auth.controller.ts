@@ -3,7 +3,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AccessTokenResponse, LoginDTO } from './dto';
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { UserDTO } from 'modules/users/dto';
-import { MyTokenAuthGuard } from 'common/guards';
+import { MyTokenAuthGuard } from 'common';
 import { UserDocument } from 'modules/users/entities';
 import { GetUser } from 'modules/users/decorators';
 

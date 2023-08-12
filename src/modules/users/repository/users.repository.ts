@@ -15,15 +15,12 @@ export class UserRepository {
     option: QueryOption,
     conditions: any = {},
   ): Promise<UserDocument[]> {
-    if (option?.skip && option?.limit) {
-      return this.userModel
-        .find(conditions)
-        .sort(option.sort)
-        .skip(option.skip)
-        .limit(option.limit);
-    }
-
-    return this.userModel.find(conditions).sort(option.sort);
+    return this.userModel
+      .find(conditions)
+      .sort(option.sort)
+      .skip(option.skip as number)
+      .limit(option.limit as number)
+      .select(option.select ?? {});
   }
 
   async findById(id: string): Promise<UserDocument | null> {
