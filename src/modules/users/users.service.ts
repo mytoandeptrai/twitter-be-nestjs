@@ -1,16 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
-import { Model } from 'mongoose';
-import { QueryOption } from 'tools';
+import { ResponseDTO } from 'common';
+import { Model, Schema } from 'mongoose';
+import { QueryOption, QueryPostOption } from 'tools';
 import { ResponseMessage } from 'utils';
+import { MSG } from '../../constants';
 import { REGEX_EMAIL, REGEX_USER } from './constants';
+import { UpdateUserDTO } from './dto';
 import { User, UserDocument } from './entities';
 import { UserRepository } from './repository';
-import { UpdateUserDTO } from './dto';
-import { ResponseDTO } from 'common';
-import { EAudience, MSG } from '../../constants';
-
 @Injectable()
 export class UsersService {
   constructor(
@@ -93,6 +97,42 @@ export class UsersService {
       .exec();
   }
 
+  async search(search: string, query: QueryPostOption) {
+    const conditions = {
+      role: { $eq: 'user' },
+      $or: [
+        {
+          name: {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+        {
+          email: {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+        {
+          username: {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+        {
+          id: search,
+        },
+        {
+          status: {
+            $regex: search,
+          },
+        },
+      ],
+    };
+
+    return this.findAllAndCount(query.options as QueryOption, conditions);
+  }
+
   /** MUTATIONS */
 
   async createUser(user: Partial<User>): Promise<UserDocument> {
@@ -127,6 +167,96 @@ export class UsersService {
       return createdUser;
     } catch (error) {
       return ResponseMessage(`${error}`, 'SERVICE_UNAVAILABLE');
+    }
+  }
+
+  async followUser(user: UserDocument, userToFollowId: string) {
+    try {
+      const userId = user._id.toString();
+      if (userId === userToFollowId) {
+        return ResponseMessage('User can not follow yourself', 'BAD_REQUEST');
+      }
+
+      const hasFollowed = user.following.findIndex(
+        (user) => user._id.toString() === userToFollowId,
+      );
+
+      if (hasFollowed > -1) {
+        return ResponseMessage('You followed this user', 'BAD_REQUEST');
+      }
+      const userToFollow = await this.findById(userToFollowId);
+      if (!userToFollow) {
+        return ResponseMessage('This user does not exist', 'BAD_REQUEST');
+      }
+
+      await this.userModel.findOneAndUpdate(
+        { _id: userToFollowId },
+        {
+          $push: { followers: userId },
+        },
+      );
+
+      await this.userModel.findOneAndUpdate(
+        { _id: userId },
+        {
+          $push: { following: userToFollowId },
+        },
+      );
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async unFollowUser(user: UserDocument, userToUnFollowId: string) {
+    try {
+      const userId = user._id.toString();
+      if (userId === userToUnFollowId) {
+        return ResponseMessage('User can not unFollow yourself', 'BAD_REQUEST');
+      }
+
+      const hasFollowed = user.following.findIndex(
+        (user) => user._id.toString() === userToUnFollowId,
+      );
+      if (hasFollowed === -1) {
+        return ResponseMessage(
+          'You have not followed this user before',
+          'BAD_REQUEST',
+        );
+      }
+
+      const userToUnFollow = await this.findById(userToUnFollowId);
+
+      if (!userToUnFollow) {
+        return ResponseMessage('This user does not exist', 'BAD_REQUEST');
+      }
+
+      await this.userModel.findOneAndUpdate(
+        { _id: userId },
+        {
+          $pull: { following: userToUnFollowId },
+        },
+      );
+
+      await this.userModel.findOneAndUpdate(
+        { _id: userToUnFollowId },
+        {
+          $pull: { followers: userId },
+        },
+      );
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async reportUser(userId: string) {
+    const user = await this.findById(userId);
+    if (user) {
+      user.reportedCount = +(user.reportedCount || 0) + 1;
+      return this.userModel.findByIdAndUpdate(userId, {
+        reportedCount: user.reportedCount,
+      });
+    } else {
+      return ResponseMessage('This user does not exist', 'BAD_REQUEST');
     }
   }
 

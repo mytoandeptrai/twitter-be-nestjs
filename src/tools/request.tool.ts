@@ -9,13 +9,15 @@ export interface QueryPreOption {
 }
 
 export interface QueryOption {
-  select: { [field: string]: 0 | 1 };
+  select?: { [field: string]: 0 | 1 };
   skip?: number;
   limit?: number;
-  sort?: { [field: string]: -1 | 1 };
+  sort?: {
+    [field: string]: -1 | 1;
+  };
 }
 
-export interface QueryOption {
-  condition?: any;
+export interface QueryPostOption {
+  conditions?: any;
   options?: QueryOption;
 }
