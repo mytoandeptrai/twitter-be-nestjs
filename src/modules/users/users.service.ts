@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { ResponseDTO } from 'common';
@@ -10,12 +15,15 @@ import { REGEX_EMAIL, REGEX_USER } from './constants';
 import { FollowAnonymousDto, UpdateUserDTO } from './dto';
 import { User, UserDocument } from './entities';
 import { UserRepository } from './repository';
+import { TweetService } from 'modules/tweet/tweet.service';
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => TweetService))
+    private readonly tweetService: TweetService,
   ) {}
 
   /** COMMON FUNCTIONS */
