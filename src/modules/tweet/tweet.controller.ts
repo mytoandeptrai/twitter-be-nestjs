@@ -31,6 +31,109 @@ export class TweetController {
     return ResponseTool.GET_OK(statistics);
   }
 
+  @Get('/reportedTweet')
+  async getReportedTweets(): Promise<ResponseDTO> {
+    const data = await this.tweetService.getReportedTweets();
+    return ResponseTool.GET_OK(data);
+  }
+
+  @Get('/user/:userId')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getTweetsByUser(
+    @GetUser() user: UserDocument,
+    @Param('userId') userId: string,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getTweetsByUser(
+      userId,
+      query.options as QueryOption,
+      user,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
+  @Get('/popular')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getPopularTweets(
+    @GetUser() user: UserDocument,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getMostPopularTweets(
+      user,
+      query.options as QueryOption,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
+  @Get('/latest')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getLatestTweets(
+    @GetUser() user: UserDocument,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getLatestTweets(
+      user,
+      query.options as QueryOption,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
+  @Get('/hashtag/:name')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getTweetsByHashtag(
+    @GetUser() user: UserDocument,
+    @Param('name') name: string,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getTweetsByHashTag(
+      user,
+      name,
+      query.options as QueryOption,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
+  @Get('/')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getNewsFeedTweets(
+    @GetUser() user: UserDocument,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } =
+      await this.tweetService.getPublicOrFollowersOnlyTweets(
+        user,
+        query.options as QueryOption,
+      );
+    return ResponseTool.GET_OK(data, total);
+  }
+
+  @Get('/user-medias/:userId')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getUserMedias(
+    @GetUser() user: UserDocument,
+    @Param('userId') userId: string,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getUserMedias(
+      user,
+      userId,
+      query.options as QueryOption,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
   @Get('/:tweetId')
   @ApiBearerAuth()
   @UseGuards(MyTokenAuthGuard)
@@ -72,19 +175,10 @@ export class TweetController {
     return ResponseTool.GET_OK(data, total);
   }
 
-  @Get('/latest')
-  @ApiBearerAuth()
-  @UseGuards(MyTokenAuthGuard)
-  @ApiQueryGetMany()
-  async getLatestTweets(
-    @GetUser() user: UserDocument,
-    @QueryGet() query: QueryPostOption,
-  ): Promise<ResponseDTO> {
-    const { data, total } = await this.tweetService.getLatestTweets(
-      user,
-      query.options as QueryOption,
-    );
-    return ResponseTool.GET_OK(data, total);
+  @Get('/count-by-hashtag/:name')
+  async getCountByHashtag(@Param('name') name: string): Promise<ResponseDTO> {
+    const count = await this.tweetService.countTweetByHashTag(name);
+    return ResponseTool.GET_OK(count);
   }
 
   @Post()

@@ -10,6 +10,7 @@ import { EAudienceConstant, ROOT_ROLES } from '../../constants';
 import { TWEET_LIMIT_DEFAULT, TWEET_SKIP_DEFAULT } from './constants';
 import { CreateTweetDTO, EUpdateTweetType, UpdateTweetDto } from './dto';
 import { Tweet, TweetDocument } from './entities';
+import { ObjectId } from 'mongodb';
 
 @Injectable()
 export class TweetService {
@@ -43,6 +44,33 @@ export class TweetService {
       isRetweet,
       retweetedById,
     };
+  }
+
+  getMediaAggregation() {
+    return [
+      {
+        $addFields: {
+          media_count: { $size: { $ifNull: ['$media', []] } },
+          likes_count: { $size: { $ifNull: ['$likes', []] } },
+        },
+      },
+      {
+        $sort: {
+          likes_count: -1,
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'author',
+          foreignField: '_id',
+          as: 'author',
+        },
+      },
+      {
+        $unwind: '$author',
+      },
+    ];
   }
 
   async hasPermission(
@@ -174,7 +202,11 @@ export class TweetService {
     }
 
     const tweetId = tweet?._id?.toString();
-    const updateQuery = tweet.saved.includes(user._id)
+    const existedSavedUser = tweet.saved.some(
+      (user: UserDocument) => user?._id?.toString() === userId,
+    );
+
+    const updateQuery = existedSavedUser
       ? { $pull: { saved: userId } }
       : { $push: { saved: userId } };
 
@@ -309,6 +341,59 @@ export class TweetService {
     return this.tweetModel.findById(id).lean();
   }
 
+  async getPublicOrFollowersOnlyTweets(
+    user: UserDocument,
+    option: QueryOption,
+  ): Promise<ResponseDTO> {
+    const following = user.following;
+    const hasUser = user ? { author: user } : {};
+    const isFollowers =
+      (following?.length > 0 && {
+        author: { $in: following },
+        audience: EAudienceConstant.FOLLOWERS,
+      }) ||
+      {};
+
+    const conditions = {
+      $or: [
+        {
+          audience: EAudienceConstant.PUBLIC,
+        },
+        ...[isFollowers],
+        ...[hasUser],
+      ],
+    };
+
+    return this.findAllAndCount(option, conditions);
+  }
+
+  async getTweetsByUser(
+    userId: string,
+    option: QueryOption,
+    userRequest: UserDocument,
+  ): Promise<ResponseDTO> {
+    const user = await this.usersService.findById(userId);
+    const isUserRequestFollowingUser = userRequest?.following?.some(
+      (u: UserDocument) => u._id.toString() === userId,
+    );
+
+    let conditions: any = {
+      author: user,
+      audience: EAudienceConstant.PUBLIC,
+    };
+
+    const userInDbId = user._id.toString();
+    const userRequestId = userRequest?._id?.toString();
+
+    if (userInDbId === userRequestId || isUserRequestFollowingUser) {
+      conditions = {
+        $or: [{ author: user, isRetweet: false }, { retweetedBy: user }],
+      };
+    }
+
+    return this.findAllAndCount(option, conditions);
+  }
+
   async getLatestTweets(
     user: UserDocument,
     option: QueryOption,
@@ -345,6 +430,57 @@ export class TweetService {
     return this.findAllAndCount(option, conditions);
   }
 
+  async getMostPopularTweets(
+    user: UserDocument,
+    option: QueryOption,
+  ): Promise<ResponseDTO> {
+    const following = user.following;
+    const conditions = {
+      $or: [
+        { audience: 0 },
+        ...((user?._id && [{ author: { $in: following } }]) || []),
+      ],
+    };
+
+    const data = await this.tweetModel
+      .aggregate([
+        {
+          $addFields: {
+            likes_count: { $size: { $ifNull: ['$likes', []] } },
+          },
+        },
+        {
+          $sort: { likes_count: -1 },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'author',
+            foreignField: '_id',
+            as: 'author',
+          },
+        },
+        {
+          $unwind: '$author',
+        },
+        {
+          $match: conditions,
+        },
+      ])
+      .skip(option.skip as number)
+      .limit(option.limit as number)
+      .exec();
+
+    await this.tweetModel.populate(data, {
+      path: 'retweetedBy',
+      select: '_id name',
+    });
+
+    const total = await this.tweetModel.countDocuments(conditions);
+
+    return { data, total };
+  }
+
   async getSavedTweets(
     user: UserDocument,
     option: QueryOption,
@@ -378,8 +514,8 @@ export class TweetService {
           $sort: { likes_count: -1 },
         },
       ])
-      .skip(TWEET_LIMIT_DEFAULT)
-      .limit(TWEET_SKIP_DEFAULT)
+      .skip(TWEET_SKIP_DEFAULT)
+      .limit(TWEET_LIMIT_DEFAULT)
       .exec();
 
     return data;
@@ -399,8 +535,8 @@ export class TweetService {
           $sort: { saved_count: -1 },
         },
       ])
-      .skip(TWEET_LIMIT_DEFAULT)
-      .limit(TWEET_SKIP_DEFAULT)
+      .skip(TWEET_SKIP_DEFAULT)
+      .limit(TWEET_LIMIT_DEFAULT)
       .exec();
 
     return data;
@@ -420,8 +556,8 @@ export class TweetService {
           $sort: { retweeted_count: -1 },
         },
       ])
-      .skip(TWEET_LIMIT_DEFAULT)
-      .limit(TWEET_SKIP_DEFAULT)
+      .skip(TWEET_SKIP_DEFAULT)
+      .limit(TWEET_LIMIT_DEFAULT)
       .exec();
 
     return data;
@@ -434,7 +570,7 @@ export class TweetService {
         this.getMostSavedTweets(),
         this.getMostRetweetedTweets(),
       ]).catch((error: any) => {
-        return [{}, {}, {}];
+        return [[], [], []];
       });
 
     const data = {
@@ -462,5 +598,113 @@ export class TweetService {
       ],
     };
     return this.findAllAndCount(query.options as QueryOption, conditions);
+  }
+
+  async getTweetsByHashTag(
+    user: UserDocument,
+    hashTag: string,
+    option: QueryOption,
+  ): Promise<ResponseDTO> {
+    const following = user.following;
+
+    const conditions = {
+      $and: [
+        {
+          $or: [
+            { audience: 0 },
+            { author: { $in: following } },
+            { author: user },
+          ],
+        },
+        { tags: hashTag },
+      ],
+    };
+    return this.findAllAndCount(option, conditions);
+  }
+
+  async getReportedTweets() {
+    const conditions = {
+      reportedCount: { $gt: 0 },
+    };
+    return this.tweetModel
+      .find(conditions)
+      .populate('author', '_id name')
+      .exec();
+  }
+
+  async getUserMedias(
+    userParam: UserDocument,
+    userId: string,
+    option: QueryOption,
+  ): Promise<ResponseDTO> {
+    const isSameUser = userParam?._id?.toString() === userId;
+    const user = isSameUser
+      ? { ...userParam }
+      : await this.usersService.findById(userId);
+
+    const following = user.following;
+
+    const conditions = {
+      author: new ObjectId(userId),
+      audience: isSameUser
+        ? { $in: Object.values(EAudienceConstant) }
+        : {
+            $in: [EAudienceConstant.PUBLIC],
+          },
+    };
+
+    if (!isSameUser) {
+      const isUserFollowing = following?.some(
+        (us: UserDocument) => us?._id?.toString() === userId,
+      );
+      conditions.audience = isUserFollowing
+        ? { $in: [EAudienceConstant.PUBLIC, EAudienceConstant.FOLLOWERS] }
+        : { $in: [EAudienceConstant.PUBLIC] };
+    }
+
+    const aggregation = [
+      {
+        $match: conditions,
+      },
+      ...this.getMediaAggregation(),
+      {
+        $match: {
+          media_count: { $gt: 0 },
+        },
+      },
+    ];
+
+    const [data, [{ total = 0 } = {}] = []] = await Promise.all([
+      this.tweetModel
+        .aggregate(aggregation as any[])
+        .skip(option.skip as number)
+        .limit(option.limit as number)
+        .exec(),
+      this.tweetModel
+        .aggregate([
+          ...aggregation,
+          {
+            $count: 'total',
+          },
+        ] as any[])
+        .exec(),
+    ]);
+
+    return { data, total };
+  }
+
+  async countTweetByHashTag(hashTag: string): Promise<number> {
+    const conditions = {
+      tags: hashTag,
+    };
+    return this.tweetModel.countDocuments(conditions).exec();
+  }
+
+  async countTweetByUser(userId: string): Promise<number> {
+    const user = await this.usersService.findById(userId);
+    const conditions = {
+      author: user,
+    };
+    return this.tweetModel.countDocuments(conditions).exec();
   }
 }
