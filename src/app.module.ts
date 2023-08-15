@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from 'modules/auth/auth.module';
 import { HashtagModule } from 'modules/hashtag/hashtag.module';
+import { LinkPreviewModule } from 'modules/link-preview/link-preview.module';
 import { SearchModule } from 'modules/search/search.module';
 import { TokenModule } from 'modules/token/token.module';
 import { TweetModule } from 'modules/tweet/tweet.module';
@@ -21,6 +22,7 @@ import { DATABASE_URL } from './constants';
     TweetModule,
     HashtagModule,
     SearchModule,
+    LinkPreviewModule,
   ],
   controllers: [],
   providers: [],
