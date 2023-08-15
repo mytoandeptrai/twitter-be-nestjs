@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from 'modules/auth/auth.module';
+import { HashtagModule } from 'modules/hashtag/hashtag.module';
+import { SearchModule } from 'modules/search/search.module';
 import { TokenModule } from 'modules/token/token.module';
 import { TweetModule } from 'modules/tweet/tweet.module';
 import { UploadModule } from 'modules/upload/upload.module';
@@ -17,6 +19,8 @@ import { DATABASE_URL } from './constants';
     AuthModule,
     UploadModule,
     TweetModule,
+    HashtagModule,
+    SearchModule,
   ],
   controllers: [],
   providers: [],
