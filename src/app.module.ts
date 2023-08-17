@@ -5,6 +5,7 @@ import { AuthModule } from 'modules/auth/auth.module';
 import { HashtagModule } from 'modules/hashtag/hashtag.module';
 import { LinkPreviewModule } from 'modules/link-preview/link-preview.module';
 import { SearchModule } from 'modules/search/search.module';
+import { StoryModule } from 'modules/story/story.module';
 import { TokenModule } from 'modules/token/token.module';
 import { TweetModule } from 'modules/tweet/tweet.module';
 import { UploadModule } from 'modules/upload/upload.module';
@@ -23,6 +24,7 @@ import { DATABASE_URL } from './constants';
     HashtagModule,
     SearchModule,
     LinkPreviewModule,
+    StoryModule,
   ],
   controllers: [],
   providers: [],
