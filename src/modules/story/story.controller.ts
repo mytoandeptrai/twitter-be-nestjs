@@ -21,7 +21,7 @@ import { QueryOption, QueryPostOption, ResponseTool } from 'tools';
 import { StoryDTO } from './dto';
 import { StoryService } from './story.service';
 
-@Controller('/story')
+@Controller('story')
 export class StoryController {
   constructor(private readonly storyService: StoryService) {}
 

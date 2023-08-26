@@ -1,9 +1,10 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as express from 'express';
+import * as fs from 'fs';
 import morgan from 'morgan';
 import { MongoTool } from 'tools/mongo.tool';
+import { createUploadsFolder } from 'utils';
 import { loggerWinston } from 'utils/logger';
 import { AppModule } from './app.module';
 import {
@@ -15,11 +16,9 @@ import {
   PROJECT_NAME,
   PROJECT_VERSION,
 } from './constants';
-import path from 'path';
-import * as fs from 'fs';
-import { createUploadsFolder } from 'utils';
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
 
   app.setGlobalPrefix(GLOBAL_PATH);
   app.useGlobalPipes(
@@ -51,7 +50,11 @@ async function bootstrap() {
   }
 
   // Config listen
-  app.enableCors();
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  });
   await app.listen(PORT || 4000);
 
   const API_URL = await app.getUrl();
