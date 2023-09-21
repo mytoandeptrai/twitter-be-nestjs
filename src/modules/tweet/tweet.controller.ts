@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -208,6 +209,25 @@ export class TweetController {
       user,
     );
     return ResponseTool.PATCH_OK(updatedTweet);
+  }
+
+  @Delete('/:tweetId/without-permission')
+  async deleteTweetWithoutPermission(
+    @Param('tweetId') tweetId: string,
+  ): Promise<ResponseDTO> {
+    await this.tweetService.deleteTweetWithoutPermission(tweetId);
+    return ResponseTool.DELETE_OK({ message: 'Tweet deleted' });
+  }
+
+  @Delete('/:tweetId')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  async deleteTweet(
+    @GetUser() user: UserDocument,
+    @Param('tweetId') tweetId: string,
+  ): Promise<ResponseDTO> {
+    await this.tweetService.deleteTweet(tweetId, user);
+    return ResponseTool.DELETE_OK({ message: 'Tweet deleted' });
   }
 
   @Patch('/report/:tweetId')

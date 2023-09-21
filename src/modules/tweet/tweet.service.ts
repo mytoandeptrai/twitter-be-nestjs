@@ -11,6 +11,7 @@ import { TWEET_LIMIT_DEFAULT, TWEET_SKIP_DEFAULT } from './constants';
 import { CreateTweetDTO, EUpdateTweetType, UpdateTweetDto } from './dto';
 import { Tweet, TweetDocument } from './entities';
 import { ObjectId } from 'mongodb';
+import { CommentService } from 'modules/comment/comment.service';
 
 @Injectable()
 export class TweetService {
@@ -19,6 +20,8 @@ export class TweetService {
     private readonly tweetModel: Model<TweetDocument>,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => CommentService))
+    private readonly commentService: CommentService,
   ) {}
 
   /** COMMON */
@@ -167,6 +170,35 @@ export class TweetService {
           .findByIdAndUpdate(tweetId, updatedData, { new: true })
           .exec();
         return response as TweetDocument;
+    }
+  }
+
+  async deleteTweet(id: string, user: UserDocument): Promise<any> {
+    const tweet = await this.hasPermission(user, id);
+    if (!tweet) {
+      return ResponseMessage(
+        'You have no permission to update this tweet',
+        'BAD_REQUEST',
+      );
+    }
+    this.commentService.deleteCommentByTweetId(id);
+    await this.tweetModel.findByIdAndRemove(id).exec();
+  }
+
+  async deleteTweetWithoutPermission(tweetId: string) {
+    try {
+      return this.tweetModel.findByIdAndDelete(tweetId);
+    } catch (error) {
+      console.log(`error`, error);
+    }
+  }
+
+  async deleteTweetsOfUserWithoutPermission(userId: string) {
+    try {
+      const user = await this.usersService.findByIdAdmin(userId);
+      return this.tweetModel.deleteMany({ author: user });
+    } catch (error) {
+      console.log(`error`, error);
     }
   }
 

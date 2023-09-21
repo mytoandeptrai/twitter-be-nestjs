@@ -32,7 +32,7 @@ async function bootstrap() {
     .setTitle(PROJECT_NAME)
     .setDescription(PROJECT_DESCRIPTION)
     .setVersion(PROJECT_VERSION)
-    .addTag('Hybrid')
+    .addTag('Please pass interview AXON ACTIVE Or Flo')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -50,11 +50,7 @@ async function bootstrap() {
   }
 
   // Config listen
-  app.enableCors({
-    origin: ['http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-  });
+  app.enableCors();
   await app.listen(PORT || 4000);
 
   const API_URL = await app.getUrl();

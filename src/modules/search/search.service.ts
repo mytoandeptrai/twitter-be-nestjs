@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { CommentService } from 'modules/comment/comment.service';
 import { HashtagService } from 'modules/hashtag/hashtag.service';
 import { TweetService } from 'modules/tweet/tweet.service';
 import { UserDocument } from 'modules/users/entities';
@@ -12,6 +13,7 @@ export class SearchService {
     private readonly usersService: UsersService,
     private readonly tweetService: TweetService,
     private readonly tagService: HashtagService,
+    private readonly commentService: CommentService,
   ) {}
 
   async search(
@@ -26,6 +28,8 @@ export class SearchService {
         return this.usersService.search(searchQuery.search, query);
       case SEARCH_KEYS.HASHTAG:
         return this.tagService.search(searchQuery.search, query);
+      case SEARCH_KEYS.COMMENT:
+        return this.commentService.search(searchQuery.search, query);
       default:
         return {
           data: [],
