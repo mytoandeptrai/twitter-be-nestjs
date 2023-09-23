@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   ApiQueryGetMany,
   MyTokenAuthGuard,
@@ -21,6 +21,7 @@ import { QueryOption, QueryPostOption, ResponseTool } from 'tools';
 import { StoryDTO } from './dto';
 import { StoryService } from './story.service';
 
+@ApiTags('Story')
 @Controller('story')
 export class StoryController {
   constructor(private readonly storyService: StoryService) {}
@@ -68,6 +69,9 @@ export class StoryController {
 
   @Patch('/:id')
   @UseGuards(MyTokenAuthGuard)
+  @ApiResponse({
+    type: ResponseDTO,
+  })
   async updateStory(
     @GetUser() user: UserDocument,
     @Param('id') id: string,
@@ -78,6 +82,9 @@ export class StoryController {
 
   @Delete('/:id')
   @UseGuards(MyTokenAuthGuard)
+  @ApiResponse({
+    type: ResponseDTO,
+  })
   async deleteStory(
     @GetUser() user: UserDocument,
     @Param('id') id: string,
