@@ -648,7 +648,7 @@ export class TweetService {
             { author: user },
           ],
         },
-        { tags: hashTag },
+        { tags: { $in: hashTag } },
       ],
     };
     return this.findAllAndCount(option, conditions);
