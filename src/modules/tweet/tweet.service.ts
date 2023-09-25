@@ -725,6 +725,56 @@ export class TweetService {
     return { data, total };
   }
 
+  async getMedias(
+    user: UserDocument,
+    option: QueryOption,
+  ): Promise<ResponseDTO> {
+    const following = user.following;
+    const conditions = {
+      $or: [
+        { audience: 0 },
+        ...((user?._id && [{ author: { $in: following } }, { author: user }]) ||
+          []),
+      ],
+    };
+
+    const aggregation = [
+      {
+        $match: conditions,
+      },
+      ...this.getMediaAggregation(),
+      {
+        $match: {
+          media_count: { $gt: 0 },
+        },
+      },
+    ];
+
+    const data = await this.tweetModel
+      .aggregate(aggregation as any[])
+      .skip(option.skip as number)
+      .limit(option.limit as number)
+      .exec();
+
+    await this.tweetModel.populate(data, {
+      path: 'retweetedBy',
+      select: '_id name',
+    });
+
+    const dataTotal = await this.tweetModel
+      .aggregate([
+        ...aggregation,
+        {
+          $count: 'total',
+        },
+      ] as any[])
+      .exec();
+
+    const total = dataTotal?.[0]?.total || 0;
+
+    return { data, total };
+  }
+
   async countTweetByHashTag(hashTag: string): Promise<number> {
     const conditions = {
       tags: hashTag,
