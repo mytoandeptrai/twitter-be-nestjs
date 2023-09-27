@@ -38,6 +38,21 @@ export class TweetController {
     return ResponseTool.GET_OK(data);
   }
 
+  @Get('/user/saved')
+  @ApiBearerAuth()
+  @UseGuards(MyTokenAuthGuard)
+  @ApiQueryGetMany()
+  async getMySavedTweets(
+    @GetUser() user: UserDocument,
+    @QueryGet() query: QueryPostOption,
+  ): Promise<ResponseDTO> {
+    const { data, total } = await this.tweetService.getSavedTweets(
+      user,
+      query.options as QueryOption,
+    );
+    return ResponseTool.GET_OK(data, total);
+  }
+
   @Get('/user/:userId')
   @ApiBearerAuth()
   @UseGuards(MyTokenAuthGuard)
@@ -159,21 +174,6 @@ export class TweetController {
   ): Promise<ResponseDTO> {
     const tweet = await this.tweetService.getTweet(tweetId, user);
     return ResponseTool.GET_OK(tweet);
-  }
-
-  @Get('/user/saved')
-  @ApiBearerAuth()
-  @UseGuards(MyTokenAuthGuard)
-  @ApiQueryGetMany()
-  async getMySavedTweets(
-    @GetUser() user: UserDocument,
-    @QueryGet() query: QueryPostOption,
-  ): Promise<ResponseDTO> {
-    const { data, total } = await this.tweetService.getSavedTweets(
-      user,
-      query.options as QueryOption,
-    );
-    return ResponseTool.GET_OK(data, total);
   }
 
   @Get('/liked/:userId')
