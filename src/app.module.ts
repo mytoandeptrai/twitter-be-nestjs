@@ -5,6 +5,7 @@ import { AuthModule } from 'modules/auth/auth.module';
 import { CommentModule } from 'modules/comment/comment.module';
 import { HashtagModule } from 'modules/hashtag/hashtag.module';
 import { LinkPreviewModule } from 'modules/link-preview/link-preview.module';
+import { MessageModule } from 'modules/message/message.module';
 import { NotificationModule } from 'modules/notification/notification.module';
 import { SearchModule } from 'modules/search/search.module';
 import { StoryModule } from 'modules/story/story.module';
@@ -29,6 +30,7 @@ import { DATABASE_URL } from './constants';
     StoryModule,
     CommentModule,
     NotificationModule,
+    MessageModule,
   ],
   controllers: [],
   providers: [],
