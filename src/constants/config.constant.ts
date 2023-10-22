@@ -12,6 +12,7 @@ export const ENVIRONMENT = getEnv('ENVIRONMENT');
 export const PRODUCTION = ENVIRONMENT === 'production';
 export const DEVELOPMENT = ENVIRONMENT === 'development';
 export const PORT = getEnv('PORT');
+export const SOCKET_PORT = getEnv('SOCKET_PORT');
 
 // Project
 export const PROJECT_NAME = getEnv('PROJECT_NAME');
