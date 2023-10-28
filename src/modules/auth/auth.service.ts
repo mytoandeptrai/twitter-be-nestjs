@@ -18,6 +18,7 @@ export class AuthService {
   ) {}
 
   /** COMMON FUNCTIONS */
+
   async generateAccessToken(
     userId: string,
     timestamp: number = Date.now(),
@@ -33,6 +34,18 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     return accessToken;
   }
+
+  async verifyAccessToken(accessToken: string) {
+    const verifiedToken = await this.jwtService.verify(accessToken);
+    if (!verifiedToken) {
+      return false;
+    }
+    const { sub, jti } = verifiedToken;
+    const checkJwt = await this.tokenService.checkJWTKey(sub, jti);
+    return checkJwt;
+  }
+
+  /** MUTATIONS */
 
   async signUp(
     userDto: UserDTO,

@@ -57,10 +57,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * @param threshold the date which we want to delete jwt keys before in milliseconds
-   * @returns number
-   */
   async deleteJWTKeysCreatedBeforeDate(threshold: number) {
     try {
       const response = await this.tokenModel.deleteMany({

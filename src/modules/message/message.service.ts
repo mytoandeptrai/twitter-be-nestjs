@@ -72,6 +72,10 @@ export class MessageService {
       roomId: roomId,
       createdAt: new Date(),
     });
-    return newMessage.save();
+    return await newMessage.save();
+  }
+
+  async deleteMessages(roomId: string) {
+    return await this.messageModel.deleteMany({ roomId });
   }
 }
