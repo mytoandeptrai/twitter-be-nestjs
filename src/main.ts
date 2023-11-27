@@ -32,7 +32,7 @@ async function bootstrap() {
     .setTitle(PROJECT_NAME)
     .setDescription(PROJECT_DESCRIPTION)
     .setVersion(PROJECT_VERSION)
-    .addTag('Please pass interview AXON ACTIVE Or Flo')
+    .addTag('This is a stupid twitter back-end using nestjs')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
