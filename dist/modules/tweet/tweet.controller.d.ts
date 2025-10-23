@@ -1,0 +1,30 @@
+import { ResponseDTO } from 'common';
+import { UserDocument } from 'modules/users/entities';
+import { QueryPostOption } from 'tools';
+import { CreateTweetDTO, UpdateTweetDto } from './dto';
+import { TweetService } from './tweet.service';
+export declare class TweetController {
+    private readonly tweetService;
+    constructor(tweetService: TweetService);
+    getTweetStatistics(): Promise<ResponseDTO>;
+    getReportedTweets(): Promise<ResponseDTO>;
+    getMySavedTweets(user: UserDocument, query: QueryPostOption): Promise<ResponseDTO>;
+    getTweetsByUser(user: UserDocument, userId: string, query: QueryPostOption): Promise<ResponseDTO>;
+    getPopularTweets(user: UserDocument, query: QueryPostOption): Promise<ResponseDTO>;
+    getLatestTweets(user: UserDocument, query: QueryPostOption): Promise<ResponseDTO>;
+    getMedias(user: UserDocument, query: QueryPostOption): Promise<ResponseDTO>;
+    getTweetsByHashtag(user: UserDocument, name: string, query: QueryPostOption): Promise<ResponseDTO>;
+    getNewsFeedTweets(user: UserDocument, query: QueryPostOption): Promise<ResponseDTO>;
+    getUserMedias(user: UserDocument, userId: string, query: QueryPostOption): Promise<ResponseDTO>;
+    getTweet(user: UserDocument, tweetId: string): Promise<ResponseDTO>;
+    getMyLikedTweets(userId: string, query: QueryPostOption): Promise<ResponseDTO>;
+    getCountByHashtag(name: string): Promise<ResponseDTO>;
+    createTweet(user: UserDocument, createTweetDto: CreateTweetDTO): Promise<ResponseDTO>;
+    updateTweet(user: UserDocument, tweetId: string, updatedData: UpdateTweetDto): Promise<ResponseDTO>;
+    deleteTweetWithoutPermission(tweetId: string): Promise<ResponseDTO>;
+    deleteTweet(user: UserDocument, tweetId: string): Promise<ResponseDTO>;
+    reportTweet(tweetId: string): Promise<ResponseDTO>;
+    reactToTweet(user: UserDocument, tweetId: string): Promise<ResponseDTO>;
+    retweetTweet(user: UserDocument, tweetId: string): Promise<ResponseDTO>;
+    saveTweet(user: UserDocument, tweetId: string): Promise<ResponseDTO>;
+}
