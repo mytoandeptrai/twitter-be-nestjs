@@ -11,21 +11,6 @@ function stringify(value: any) {
   }
 }
 
-// logs dir
-// const logDir: string = path.join(
-//   __dirname,
-//   '../../..',
-//   Boolean(process.env.DIRLOG)
-//     ? path.posix.join(environment.log.dir, 'worker')
-//     : environment.log.dir,
-// );
-
-// if (!fs.existsSync(logDir)) {
-//   fs.mkdirSync(logDir);
-// }
-
-// Define log format
-
 winston.addColors({
   error: 'red',
   warn: 'yellow',
@@ -33,49 +18,39 @@ winston.addColors({
   http: 'magenta',
   debug: 'white',
 });
+
 const logFormat = winston.format.printf(({ timestamp, level, message }) => {
   return `${timestamp} ${level}: ${stringify(message)}`;
 });
 
-/*
- * Log Level
- * error: 0, warn: 1, info: 2, http: 3, verbose: 4, debug: 5, silly: 6
- */
-const loggerWinston = winston.createLogger({
-  format: winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss',
-    }),
-    logFormat,
-  ),
-  transports: [
-    // debug log setting
+const transports: winston.transport[] = [];
+
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+  transports.push(
     new winstonDaily({
       level: 'debug',
       datePattern: 'YYYY-MM-DD-HH',
-      dirname: path.join(__dirname, 'debug.log'), // log file /logs/debug/*.log in save
+      dirname: path.join(__dirname, '../../../logs/debug'),
       filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
-      json: false,
+      maxFiles: 30,
       zippedArchive: true,
       utc: true,
     }),
-    // error log setting
     new winstonDaily({
       level: 'error',
       datePattern: 'YYYY-MM-DD-HH',
-      dirname: path.join(__dirname, 'error.log'), // log file /logs/error/*.log in save
+      dirname: path.join(__dirname, '../../../logs/error'),
       filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
+      maxFiles: 30,
       handleExceptions: true,
-      json: false,
       zippedArchive: true,
       utc: true,
     }),
-  ],
-});
+  );
+}
 
-loggerWinston.add(
+// ✅ Luôn log ra console (serverless bắt buộc)
+transports.push(
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.splat(),
@@ -84,10 +59,17 @@ loggerWinston.add(
   }),
 );
 
-const streamWinston = {
+export const loggerWinston = winston.createLogger({
+  level: 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    logFormat,
+  ),
+  transports,
+});
+
+export const streamWinston = {
   write: (message: string) => {
-    loggerWinston.info(message.substring(0, message.lastIndexOf('\n')));
+    loggerWinston.info(message.trim());
   },
 };
-
-export { loggerWinston, streamWinston };

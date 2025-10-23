@@ -48,42 +48,38 @@ winston.addColors({
 const logFormat = winston.format.printf(({ timestamp, level, message }) => {
     return `${timestamp} ${level}: ${stringify(message)}`;
 });
-const loggerWinston = winston.createLogger({
-    format: winston.format.combine(winston.format.timestamp({
-        format: 'YYYY-MM-DD HH:mm:ss',
-    }), logFormat),
-    transports: [
-        new winston_daily_rotate_file_1.default({
-            level: 'debug',
-            datePattern: 'YYYY-MM-DD-HH',
-            dirname: path.join(__dirname, 'debug.log'),
-            filename: `%DATE%.log`,
-            maxFiles: 30,
-            json: false,
-            zippedArchive: true,
-            utc: true,
-        }),
-        new winston_daily_rotate_file_1.default({
-            level: 'error',
-            datePattern: 'YYYY-MM-DD-HH',
-            dirname: path.join(__dirname, 'error.log'),
-            filename: `%DATE%.log`,
-            maxFiles: 30,
-            handleExceptions: true,
-            json: false,
-            zippedArchive: true,
-            utc: true,
-        }),
-    ],
-});
-exports.loggerWinston = loggerWinston;
-loggerWinston.add(new winston.transports.Console({
+const transports = [];
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+    transports.push(new winston_daily_rotate_file_1.default({
+        level: 'debug',
+        datePattern: 'YYYY-MM-DD-HH',
+        dirname: path.join(__dirname, '../../../logs/debug'),
+        filename: `%DATE%.log`,
+        maxFiles: 30,
+        zippedArchive: true,
+        utc: true,
+    }), new winston_daily_rotate_file_1.default({
+        level: 'error',
+        datePattern: 'YYYY-MM-DD-HH',
+        dirname: path.join(__dirname, '../../../logs/error'),
+        filename: `%DATE%.log`,
+        maxFiles: 30,
+        handleExceptions: true,
+        zippedArchive: true,
+        utc: true,
+    }));
+}
+transports.push(new winston.transports.Console({
     format: winston.format.combine(winston.format.splat(), winston.format.colorize()),
 }));
-const streamWinston = {
+exports.loggerWinston = winston.createLogger({
+    level: 'debug',
+    format: winston.format.combine(winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
+    transports,
+});
+exports.streamWinston = {
     write: (message) => {
-        loggerWinston.info(message.substring(0, message.lastIndexOf('\n')));
+        exports.loggerWinston.info(message.trim());
     },
 };
-exports.streamWinston = streamWinston;
 //# sourceMappingURL=logger.js.map
