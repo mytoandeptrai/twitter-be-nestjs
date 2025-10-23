@@ -15,6 +15,7 @@ import { TokenModule } from 'modules/token/token.module';
 import { TweetModule } from 'modules/tweet/tweet.module';
 import { UploadModule } from 'modules/upload/upload.module';
 import { UsersModule } from 'modules/users/users.module';
+import { HelperModule } from 'modules/helper/helper.module';
 import { DATABASE_URL } from './constants';
 
 @Module({
@@ -35,6 +36,7 @@ import { DATABASE_URL } from './constants';
     MessageModule,
     RoomModule,
     ChatModule,
+    HelperModule,
   ],
   controllers: [],
   providers: [],
